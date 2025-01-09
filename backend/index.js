@@ -1,58 +1,62 @@
 const express = require("express");
-require("dotenv").config();
 const app = express();
 const mongoose = require("mongoose");
-const port = 8080;
 const cors = require("cors");
-
-const db = mongoose
-  .connect(process.env.URI)
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((error) => console.log(error));
-
-const messageSchema = new mongoose.Schema({
-  message: String,
-});
-const Message = mongoose.model("Message", messageSchema);
+const port = 8080;
+require("dotenv").config();
 
 app.use(cors());
 app.use(express.json());
 
-app.get("/api/getAllMessages", async (req, res) => {
+const db = mongoose.connect(process.env.URL).then(() => {
+  console.log("Database Connected");
+});
+
+const messageSchema = mongoose.Schema({
+  message: String,
+});
+const Message = mongoose.model("Message", messageSchema);
+
+app.get("/", (req, res) => {
+  res.send("Server working");
+});
+
+app.get("/api/messages", async (req, res) => {
+  const messages = await Message.find();
+  res.status(200).json(messages);
+});
+
+app.post("/api/send", async (req, res) => {
+  const { message } = req.body;
   try {
-    const messages = await Message.find();
-    res.send(messages);
+    const newMessage = new Message({ message });
+    newMessage.save();
+    res.status(201).json({ message: "Message Save Successfully" });
   } catch (error) {
     console.log(error);
   }
 });
 
-app.post("/api/send", (req, res) => {
-  const { message } = req.body;
-  try {
-    const newMessage = new Message({ message });
-    newMessage.save();
-    res
-      .status(201)
-      .json({ data: message, message: "Message sent successfully" });
-  } catch (error) {}
-  res.status(200).json({ message: "message stored" });
-});
-
 app.delete("/api/delete", async (req, res) => {
   const { id } = req.body;
   try {
-    if (id) {
-      await Message.findByIdAndDelete(id);
-      res.status(200).json({ message: "message deleted" });
-    } else {
-      res.status(400).json({ message: "id is required" });
-    }
+    await Message.findByIdAndDelete(id);
+    res.status(200).json({ message: "Message Deleated" });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+app.put("/api/update", async (req, res) => {
+  const { id, newMessage } = req.body;
+  try {
+    await Message.findByIdAndUpdate(id, { message: newMessage });
+    res.status(200).json({ message: "Message Updated" });
   } catch (error) {
     console.log(error);
   }
 });
 
 app.listen(port, (req, res) => {
-  console.log(`port is running on ${port}`);
+  console.log(`server running on port : ${port}`);
 });
